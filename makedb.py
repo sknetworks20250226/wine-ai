@@ -71,11 +71,7 @@ wine_index = pc.Index(os.environ['PINECONE_INDEX_NAME'])
 print(wine_index.describe_index_stats())
 
 # csv 파일 읽어서 벡터 db 만들기
-# from langchain_community.document_loaders import CSVLoader
-# loader = CSVLoader('winemag-data-130k-v2.csv', encoding='utf-8')
-# docs = loader.load()
 df = pd.read_csv('winemag-data-130k-v2.csv', encoding='utf-8')
-df = df.dropna()
 docs =  [create_document_with_metadata(row) for _, row in df.iterrows()]
 
 # 임베딩 모델

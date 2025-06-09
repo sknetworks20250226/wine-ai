@@ -55,4 +55,37 @@ def describe_dish_flavor(image_bytes,query):
     ]
     return llm.invoke(messages).content
 
-
+# 벡터DB에서 검색
+def search_wine(dish_flavor):
+    results_with_scores =  vector_store.similarity_search_with_score(
+        dish_flavor,
+        k=2
+    )
+    # 결과를 유사도 함께 출력
+    wine_reives = []
+    for doc,score in  results_with_scores:
+        review_text = f'유사도:{score:.4f}\n내용:{doc.page_content}'
+        wine_reives.append(review_text)
+    return {
+        'dish_flavor' :dish_flavor,
+        'wine_reviews' : '\n\n' .join(wine_reives)
+    }
+# 추천사유를 llm으로 생성
+def recommand_wine(inputs):
+    prompt = ChatPromptTemplate.from_messages([
+        ('system',''' '''),
+        ('human',''' 
+            와인 페어링 추천에 아래의 '요리의 풍미' 와 '와인 리뷰' 를 참고해 한글로 답변해 주세요
+            추천된 와인이 두개여야 하고 이를 검증한 다음에 검증이 되면
+            두개의 추천된 와인중에 가장 어울리는 와인을 추천해 주세요
+            위의 두 과정으 다시 한번 검토해서 의도대로 답변 해 주세요
+         
+            '요리의 풍미':
+            {dish_flavor}
+         
+            '와인 리뷰':
+            {wine_reviews}
+            ''')
+    ])
+    chain = prompt | llm | StrOutputParser()
+    return chain.invoke(inputs)

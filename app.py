@@ -28,7 +28,7 @@ with col1:
                 time.sleep(3)
                 st.markdown('### 와인 리뷰 검색 결과')
                 wine_search_result = 
-                st.txt(wine_search_result['wine_reviews'])
+                st.text(wine_search_result['wine_reviews'])
             with st.spinner('3단계 : AI 소믈리에가 와인 페이링에 대한 추천글을 생성하는 중...'):
                 # LLM을 이용해서 추천글 생성                
                 time.sleep(3)
@@ -36,6 +36,5 @@ with col1:
                 wine_recommandation = 
                 st.info( wine_recommandation)
             st.success('추천이 완료되었습니다.')
-
-
-
+# 유사도를 높이도록 -- 
+# 추천된 와인의 이미지를 생성 또는 찾아서 출력해보기            

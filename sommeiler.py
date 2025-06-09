@@ -110,11 +110,11 @@ def search_wine(dish_flavor):
         final_score = score + (flavor_match_score * 0.1)  # 맛 매칭 점수에 가중치 부여
         
         review_text = f'''유사도: {final_score:.4f}
-와인명: {metadata.get('title', 'Unknown')}
-국가: {metadata.get('country', 'N/A')}
-가격: ${metadata.get('price', 'N/A')}
-맛 매칭 점수: {flavor_match_score}
-내용: {metadata.get('description', 'No description available')}'''
+            와인명: {metadata.get('title', 'Unknown')}
+            국가: {metadata.get('country', 'N/A')}
+            가격: ${metadata.get('price', 'N/A')}
+            맛 매칭 점수: {flavor_match_score}
+            내용: {metadata.get('description', 'No description available')}'''
         wine_reviews.append((final_score, review_text))
     
     # 최종 점수로 정렬하여 상위 2개 선택

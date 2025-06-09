@@ -61,21 +61,27 @@ def describe_dish_flavor(image_bytes,query):
 
 # 벡터DB에서 검색
 def search_wine(dish_flavor):
-    # 핵심 와인 페어링 키워드 시스템
+    # 와인 페어링 전문 지식 기반 키워드 시스템
     wine_pairing_keywords = {
         'taste': {
-            'sweet': ['sweet', 'sugar', 'honey', 'caramel', 'fruity'],
-            'sour': ['sour', 'acidic', 'citrus', 'tart', 'tangy'],
-            'spicy': ['spicy', 'hot', 'pepper', 'chili', 'pungent'],
-            'rich': ['rich', 'heavy', 'bold', 'intense', 'full-bodied'],
-            'light': ['light', 'delicate', 'subtle', 'mild', 'refreshing'],
-            'umami': ['umami', 'savory', 'earthy', 'mushroom', 'meaty'],
-            'bitter': ['bitter', 'dark chocolate', 'coffee', 'herbal']
+            'sweet': ['sweet', 'sugar', 'honey', 'caramel', 'fruity', 'ripe', 'sweetness'],
+            'sour': ['sour', 'acidic', 'citrus', 'tart', 'tangy', 'fresh', 'bright'],
+            'spicy': ['spicy', 'hot', 'pepper', 'chili', 'pungent', 'heat', 'spice'],
+            'rich': ['rich', 'heavy', 'bold', 'intense', 'full-bodied', 'deep', 'concentrated'],
+            'light': ['light', 'delicate', 'subtle', 'mild', 'refreshing', 'crisp', 'elegant'],
+            'umami': ['umami', 'savory', 'earthy', 'mushroom', 'meaty', 'savory', 'complex'],
+            'bitter': ['bitter', 'dark chocolate', 'coffee', 'herbal', 'bitterness', 'tannic']
         },
         'texture': {
-            'creamy': ['creamy', 'smooth', 'velvety', 'buttery'],
-            'crispy': ['crispy', 'crunchy', 'fresh'],
-            'tender': ['tender', 'soft', 'delicate', 'juicy']
+            'creamy': ['creamy', 'smooth', 'velvety', 'buttery', 'rich', 'soft'],
+            'crispy': ['crispy', 'crunchy', 'fresh', 'crackling', 'crisp'],
+            'tender': ['tender', 'soft', 'delicate', 'juicy', 'succulent']
+        },
+        'wine_type': {
+            'white': ['white', 'chardonnay', 'sauvignon blanc', 'riesling', 'pinot grigio'],
+            'red': ['red', 'cabernet', 'merlot', 'pinot noir', 'syrah'],
+            'sparkling': ['sparkling', 'champagne', 'prosecco', 'cava'],
+            'rose': ['rose', 'blush', 'pink']
         }
     }
 
@@ -83,16 +89,29 @@ def search_wine(dish_flavor):
     dish_characteristics = {}
     for category, subcategories in wine_pairing_keywords.items():
         for subcategory, keywords in subcategories.items():
+            # 부분 일치도 고려
             matches = sum(1 for keyword in keywords if keyword in dish_flavor.lower())
             if matches > 0:
                 dish_characteristics[subcategory] = matches * 2
 
-    # 검색 쿼리 생성 - 간단하고 명확하게
-    enhanced_query = f"Wine pairing for: {dish_flavor}"
-    if dish_characteristics:
-        enhanced_query += " with characteristics: " + ", ".join(
-            f"{char} ({weight})" for char, weight in dish_characteristics.items()
-        )
+    # 와인 페어링 규칙 기반 검색 쿼리 생성
+    enhanced_query = f"Expert wine pairing for dish: {dish_flavor}\n"
+    enhanced_query += "Key characteristics for wine pairing:\n"
+    
+    # 주요 특징 강조
+    for subcategory, weight in dish_characteristics.items():
+        enhanced_query += f"- {subcategory} (importance: {weight})\n"
+    
+    # 와인 페어링 규칙 추가
+    enhanced_query += "\nWine pairing rules:\n"
+    if any(k in dish_characteristics for k in ['spicy', 'hot']):
+        enhanced_query += "- Look for wines with residual sugar to balance spice\n"
+    if any(k in dish_characteristics for k in ['rich', 'heavy']):
+        enhanced_query += "- Consider full-bodied wines to match intensity\n"
+    if any(k in dish_characteristics for k in ['light', 'delicate']):
+        enhanced_query += "- Prefer light, crisp wines to complement delicacy\n"
+    if any(k in dish_characteristics for k in ['sour', 'acidic']):
+        enhanced_query += "- Match with wines of similar acidity\n"
 
     # 메타데이터 필터링 조건 설정
     metadata_filters = {
@@ -103,7 +122,7 @@ def search_wine(dish_flavor):
     # 유사도 검색 실행
     results_with_scores = vector_store.similarity_search_with_score(
         enhanced_query,
-        k=20,
+        k=30,  # 더 많은 후보 검색
         filter=metadata_filters
     )
 
@@ -113,22 +132,43 @@ def search_wine(dish_flavor):
         metadata = doc.metadata
         wine_content = doc.page_content.lower()
         
-        # 키워드 매칭 점수 계산
+        # 키워드 매칭 점수 계산 (부분 일치 고려)
         keyword_score = 0
+        total_possible_matches = 0
         for subcategory, weight in dish_characteristics.items():
-            keywords = wine_pairing_keywords['taste'].get(subcategory, []) + \
-                      wine_pairing_keywords['texture'].get(subcategory, [])
+            keywords = []
+            for category in wine_pairing_keywords.values():
+                if subcategory in category:
+                    keywords.extend(category[subcategory])
+            
+            # 부분 일치 점수 계산
             matches = sum(1 for keyword in keywords if keyword in wine_content)
-            keyword_score += weight * matches
+            if matches > 0:
+                keyword_score += weight * matches
+            total_possible_matches += weight * len(keywords)
 
-        # 최종 점수 계산 (유사도 + 키워드 매칭)
-        final_score = score + (keyword_score * 0.5)  # 키워드 매칭에 더 높은 가중치
+        # 와인 타입 매칭 점수 추가
+        wine_type_score = 0
+        for wine_type, keywords in wine_pairing_keywords['wine_type'].items():
+            if any(keyword in wine_content for keyword in keywords):
+                wine_type_score += 1
+
+        # 점수 정규화 (0-1 범위)
+        normalized_keyword_score = keyword_score / total_possible_matches if total_possible_matches > 0 else 0
+        normalized_wine_type_score = wine_type_score / len(wine_pairing_keywords['wine_type'])
+
+        # 최종 점수 계산
+        # 기본 유사도 점수에 매칭 점수를 가중치로 적용
+        final_score = score * (1 + normalized_keyword_score * 0.5 + normalized_wine_type_score * 0.3)
+        # 최종 점수를 0-1 범위로 제한
+        final_score = min(1.0, final_score)
 
         review_text = f'''유사도: {final_score:.4f}
             와인명: {metadata.get('title', 'Unknown')}
             국가: {metadata.get('country', 'N/A')}
             가격: ${metadata.get('price', 'N/A')}
-            맛 매칭 점수: {keyword_score}
+            맛 매칭 점수: {normalized_keyword_score:.4f}
+            와인 타입 매칭 점수: {normalized_wine_type_score:.4f}
             내용: {metadata.get('description', 'No description available')}'''
         wine_reviews.append((final_score, review_text))
 

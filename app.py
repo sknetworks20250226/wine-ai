@@ -1,4 +1,7 @@
 import streamlit as st
+from sommeiler import search_wine, recommand_wine, describe_dish_flavor
+
+
 st.title("Somelier AI")
 col1, col2 = st.columns([3,1])
 with col1:
@@ -16,14 +19,17 @@ with col1:
         else:
             with st.spinner("1단계 : 요리의 맛과 향을 분석하는 중..."):
                 # 멀티모달 모델을 이용해서 사진의 요리의 특성을 분석
-                # 출력
+                # 출력                
                 time.sleep(3)
+                st.markdown('### 요리의 맛과 향 분석 결과')
             with st.spinner('2단계 : 요리에 어울리는 와인 리뷰를 검색하는 중....'):
-                # 요리의 특성정보로 와인을 추천ai 동작
+                # 요리의 특성정보로 와인을 추천ai 동작                
                 time.sleep(3)
+                st.markdown('### 와인 리뷰 검색 결과')
             with st.spinner('3단계 : AI 소믈리에가 와인 페이링에 대한 추천글을 생성하는 중...'):
-                # LLM을 이용해서 추천글 생성
+                # LLM을 이용해서 추천글 생성                
                 time.sleep(3)
+                st.markdown('### AI 소믈리에 와인 페어링 추천')
             st.success('추천이 완료되었습니다.')
 
 
